@@ -1,0 +1,4 @@
+env:"dev"
+database_path:"datatbase/storage.db"
+http_server:
+  address:"localhost:8082"
