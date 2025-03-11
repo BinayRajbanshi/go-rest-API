@@ -11,12 +11,8 @@ import (
 	"time"
 
 	config "github.com/BinayRajbanshi/go-rest-API/internal"
+	"github.com/BinayRajbanshi/go-rest-API/internal/controllers/user"
 )
-
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request received: '/'")
-	w.Write([]byte("Welcome to the API,"))
-}
 
 func main() {
 	// load config
@@ -25,7 +21,7 @@ func main() {
 	// database setup
 	// setup router
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", handleRoot)
+	mux.HandleFunc("POST /api/v1/users", user.New())
 
 	// setup server
 	server := &http.Server{
