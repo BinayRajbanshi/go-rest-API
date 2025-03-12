@@ -7,13 +7,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
+	storage "github.com/BinayRajbanshi/go-rest-API/database"
 	"github.com/BinayRajbanshi/go-rest-API/internal/models"
 	"github.com/BinayRajbanshi/go-rest-API/internal/utils/response"
 	"github.com/go-playground/validator/v10"
 )
 
-func New() http.HandlerFunc {
+func New(db storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("Request received: '/api/v1/users'")
 		var User models.User
@@ -37,10 +39,50 @@ func New() http.HandlerFunc {
 			return
 		}
 
-		successRes := map[string]int{
+		userId, err := db.CreateUser(User.Username, User.Email, User.Password)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, err)
+		}
+
+		successRes := map[string]int64{
 			"success": 1,
+			"id":      userId,
 		}
 		// send back json response
 		response.WriteJson(w, http.StatusCreated, successRes)
+	}
+}
+
+func GetAll(db storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		users, err := db.GetUsers()
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.BaseError(err))
+			return
+		}
+
+		response.WriteJson(w, http.StatusOK, users)
+	}
+}
+
+func Delete(db storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		intId, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.BaseError(fmt.Errorf("valid (only number) id is required in path.")))
+			return
+		}
+		deletedId, err := db.DeleteUser(intId)
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.BaseError(err))
+			return
+		}
+
+		successMsg := map[string]int64{
+			"success":   1,
+			"deletedId": deletedId,
+		}
+		response.WriteJson(w, http.StatusOK, successMsg)
 	}
 }

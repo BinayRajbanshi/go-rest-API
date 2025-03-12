@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BinayRajbanshi/go-rest-API/database/sqlite"
 	config "github.com/BinayRajbanshi/go-rest-API/internal"
 	"github.com/BinayRajbanshi/go-rest-API/internal/controllers/user"
 )
@@ -19,9 +21,17 @@ func main() {
 	cfg := config.MustLoad()
 
 	// database setup
+	db, err := sqlite.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	slog.Info("Database initialized", slog.String("Env: ", cfg.Env))
 	// setup router
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/v1/users", user.New())
+	mux.HandleFunc("POST /api/v1/users", user.New(db))
+	mux.HandleFunc("GET /api/v1/users", user.GetAll(db))
+	mux.HandleFunc("DELETE /api/v1/users/{id}", user.Delete(db))
 
 	// setup server
 	server := &http.Server{
@@ -51,7 +61,7 @@ func main() {
 	ctx, cancelContext := context.WithTimeout(ctx, 5*time.Second) //ctx.Done() channel is called automatically after 5 seconds. I can also check if context.DeadlineExceeded or context.Canceled
 	defer cancelContext()
 
-	err := server.Shutdown(ctx) //if the provided context expires before the shutdown is complete, Shutdown returns the context's error, otherwise it returns any error returned from closing the [Server]'s underlying Listener(s).
+	err = server.Shutdown(ctx) //if the provided context expires before the shutdown is complete, Shutdown returns the context's error, otherwise it returns any error returned from closing the [Server]'s underlying Listener(s).
 	if err != nil {
 		slog.Error("failed to shutdown server", slog.String("error", err.Error()))
 	}
